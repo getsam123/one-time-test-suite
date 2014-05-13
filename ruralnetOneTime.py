@@ -1,8 +1,16 @@
 import argparse
 import logging
 import sys
+import time
+import subprocess as sub
+from os.path import expanduser
+import os 
 
-
+TESTSUITE_LOG='suite.log'
+TEST_LOG=time.strftime("%j-%Y")+'.log'
+HOME_DIR=expanduser("~")
+EXP_DIR=HOME_DIR+"/one-time-test-suite/"
+hostname = os.uname()[1]
 
 def argsFine(args,test):
 	if test=='curl':
@@ -15,23 +23,36 @@ def argsFine(args,test):
                         return False
                 else:
                         return True
-	
+def run_curl(args):
+	logTo(TEST_LOG,'Starting Curl with args . '+' '.join(args),'INFO','a')
+	p=sub.Popen(["bash","curl.sh",HOME_DIR,args[0],args[1],args[2],args[3],EXP_DIR,"onetime/"+hostname+"/"+EXP_DIR])
+	p.wait()
+	logTo(TEST_LOG,'Finished Curl ','INFO','a')
+def run_iperf(args):
+        logTo(TEST_LOG,'Starting Iperf with args . '+' '.join(args),'INFO','a')
+	#p=sub.Popen(["bash","iperf_tcp_up.sh",HOME_DIR,args[0],args[1],args[2],"onetime/"+hostname+"/"+EXP_DIR])
+	#p.wait()
+        logTo(TEST_LOG,'Finished Iperf ','INFO','a')	
 
 def runMaster(options):
 	#TODO
-	location='_'.join(options['L'])
-	provider='_'.join(options['P'])
-	contype='_'.join(options['C'])
+	location='-'.join(options['L'])
+	provider='-'.join(options['P'])
+	contype='-'.join(options['C'])
+	global EXP_DIR
+	EXP_DIR=EXP_DIR+location+'_'+provider+'_'+contype
 	test_add=[]
+	if not os.path.exists(EXP_DIR):
+		os.makedirs(EXP_DIR)
 	if options['t']:
 		#Adding Downlink Test
 		fcurl=open('testArgs/curl','r')
 		lines=fcurl.readlines()
 		lines=[x.split('\n')[0] for x in lines]
-		if argsFine(lines,'curl'):
-			test_add.append('run_curl '+' '.join(lines)+'\n')
+		if argsFine(lines,'curl'):			
+			run_curl(lines)
 		else:
-			logging.error('Error in parsing Curl args Missing or wrong Args in testArgs/curl')
+			logTo(TESTSUITE_LOG,'Error in parsing Curl args Missing or wrong Args in testArgs/curl','ERROR','w')
 			sys.exit('Error! Check ConfigError.log for more details...')
 		fcurl.close()
 		#Adding Iperf Uplink Test
@@ -39,9 +60,9 @@ def runMaster(options):
                 lines=fperf.readlines()
                 lines=[x.split('\n')[0] for x in lines]
                 if argsFine(lines,'iperf'):
-                        test_add.append('run_iperf_tcp_up '+' '.join(lines)+'\n')
+			run_iperf(lines)
                 else:
-                        logging.error('Error in parsing Iperf args: Missing or wrong Args in testArgs/iperf')
+                        logTo(TESTSUITE_LOG,'Error in parsing Curl args Missing or wrong Args in testArgs/iperf','ERROR','w')
                         sys.exit('Error! Check ConfigError.log for more details...')
                 fperf.close()
 	fmaster=open('master.sh','r')
@@ -71,9 +92,18 @@ def main():
 	args = parser.parse_args()
 	runargs=vars(args)
 	runMaster(runargs)
-if __name__ == '__main__':
-	logging.basicConfig(level=logging.DEBUG,
-                    format='%(asctime)s %(levelname)s %(message)s',
-                    filename='ConfigError.log',
-                    filemode='w')
+
+def logTo(fname,msg,msg_type,mode):
+	logging.basicConfig(level=logging.DEBUG,format='%(asctime)s %(levelname)s %(message)s',filename=fname,filemode=mode)
+	if msg_type=='ERROR':
+		logging.error(msg)
+	elif msg_type=='DEBUG':
+		logging.debug(msg)
+        elif msg_type=='INFO':
+                logging.info(msg)
+	else:
+		logging.warning(msg)
+
+if __name__ == '__main__':	
 	main()
+
