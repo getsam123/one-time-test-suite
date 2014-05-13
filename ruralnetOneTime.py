@@ -23,16 +23,62 @@ def argsFine(args,test):
                         return False
                 else:
                         return True
+	elif test=='ping':
+		if len(args)!=1:
+			return False
+                else:
+                        return True
+        elif test=='tcptraceroute':
+                if len(args)!=1:
+                        return False
+                else:
+                        return True
+        elif test=='ping_gw':
+                if len(args)!=1:
+                        return False
+                else:
+                        return True
+	
 def run_curl(args):
 	logTo(TEST_LOG,'Starting Curl with args . '+' '.join(args),'INFO','a')
 	p=sub.Popen(["bash","curl.sh",HOME_DIR,args[0],args[1],args[2],args[3],EXP_DIR,"onetime/"+hostname+"/"+EXP_DIR])
 	p.wait()
 	logTo(TEST_LOG,'Finished Curl ','INFO','a')
+
 def run_iperf(args):
         logTo(TEST_LOG,'Starting Iperf with args . '+' '.join(args),'INFO','a')
-	#p=sub.Popen(["bash","iperf_tcp_up.sh",HOME_DIR,args[0],args[1],args[2],"onetime/"+hostname+"/"+EXP_DIR])
-	#p.wait()
-        logTo(TEST_LOG,'Finished Iperf ','INFO','a')	
+	p=sub.Popen(["bash","iperf_tcp_up.sh",HOME_DIR,args[0],args[1],args[2],EXP_DIR,"onetime/"+hostname+"/"+EXP_DIR)
+	p.wait()
+        logTo(TEST_LOG,'Finished Iperf ','INFO','a')
+
+def run_ping(args):
+        logTo(TEST_LOG,'Starting Ping with args . '+' '.join(args),'INFO','a')
+        p=sub.Popen(["bash","ping.sh",HOME_DIR,args[0],args[1],args[2],EXP_DIR,"onetime/"+hostname+"/"+EXP_DIR)
+        p.wait()
+        logTo(TEST_LOG,'Finished Ping ','INFO','a')
+def run_ping_gw():
+	logTo(TEST_LOG,'Starting Ping Gw with args . '+' '.join(args),'INFO','a')
+        p=sub.Popen(["bash","tcptraceroute_gw.sh",HOME_DIR,args[0],args[1],args[2],EXP_DIR,"onetime/"+hostname+"/"+EXP_DIR)
+        p.wait()
+        logTo(TEST_LOG,'Finished Ping Gw ','INFO','a')
+
+def run_tcptraceroute(args):
+        logTo(TEST_LOG,'Starting TCPtraceroute with args . '+' '.join(args),'INFO','a')
+        p=sub.Popen(["bash","tcptraceroute.sh",HOME_DIR,args[0],args[1],args[2],EXP_DIR,"onetime/"+hostname+"/"+EXP_DIR)
+        p.wait()
+        logTo(TEST_LOG,'Finished tcptraceroute ','INFO','a')
+def run_selenium(args):
+        logTo(TEST_LOG,'Starting Selenium  with args . '+' '.join(args),'INFO','a')
+        p=sub.Popen(["python","useext.py",HOME_DIR,args,EXP_DIR)
+        p.wait()
+        logTo(TEST_LOG,'Finished tcptraceroute ','INFO','a')
+def run_CDN():
+        logTo(TEST_LOG,'Starting CDNPerf with args . '+' '.join(args),'INFO','a')
+        p=sub.Popen(["bash","tcptraceroute.sh",HOME_DIR,args[0],args[1],args[2],EXP_DIR,"onetime/"+hostname+"/"+EXP_DIR)
+        p.wait()
+        logTo(TEST_LOG,'Finished tcptraceroute ','INFO','a')	
+
+
 
 def runMaster(options):
 	#TODO
@@ -40,10 +86,14 @@ def runMaster(options):
 	provider='-'.join(options['P'])
 	contype='-'.join(options['C'])
 	global EXP_DIR
-	EXP_DIR=EXP_DIR+location+'_'+provider+'_'+contype
-	test_add=[]
+        if options['r']:
+                #Adding Roaming  Test
+                EXP_DIR=EXP_DIR+location+'_'+provider+'_'+contype+'/'+time.strftime('%s')
+	else:
+		EXP_DIR=EXP_DIR+location+'_'+provider+'_'+contype+'/Roam/'+options['r']+time.strftime('%s')
 	if not os.path.exists(EXP_DIR):
 		os.makedirs(EXP_DIR)
+
 	if options['t']:
 		#Adding Downlink Test
 		fcurl=open('testArgs/curl','r')
@@ -53,7 +103,7 @@ def runMaster(options):
 			run_curl(lines)
 		else:
 			logTo(TESTSUITE_LOG,'Error in parsing Curl args Missing or wrong Args in testArgs/curl','ERROR','w')
-			sys.exit('Error! Check ConfigError.log for more details...')
+			sys.exit('Error! Check suite.log for more details...')
 		fcurl.close()
 		#Adding Iperf Uplink Test
                 fperf=open('testArgs/iperf','r')
@@ -62,16 +112,65 @@ def runMaster(options):
                 if argsFine(lines,'iperf'):
 			run_iperf(lines)
                 else:
-                        logTo(TESTSUITE_LOG,'Error in parsing Curl args Missing or wrong Args in testArgs/iperf','ERROR','w')
-                        sys.exit('Error! Check ConfigError.log for more details...')
+                        logTo(TESTSUITE_LOG,'Error in parsing Iperf args Missing or wrong Args in testArgs/iperf','ERROR','w')
+                        sys.exit('Error! Check suite.log for more details...')
                 fperf.close()
-	fmaster=open('master.sh','r')
-	fnewmaster=open('master1.sh','w')
-	for line in fmaster.readlines():
-		fnewmaster.write(line)
-	for line in test_add:
-		fnewmaster.write(line)
-	print "done"
+	elif options['l']:
+		#Adding Latency Tests
+                fping=open('testArgs/ping','r')
+                lines=fping.readlines()
+                lines=[x.split('\n')[0] for x in lines]
+		for line in lines:
+			if argsFine(line,'ping'):
+				run_ping(line)
+			else:
+				logTo(TESTSUITE_LOG,'Error in parsing Ping args Missing or wrong Args in testArgs/ping','ERROR','w')
+				sys.exit('Error! Check suite.log for more details...')
+		fping.close()
+		run_ping_gw()
+	elif options['T']:
+		#Addding Tcptraceroute tests
+		ftr=open('testArgs/tcptraceroute','r')
+                lines=ftr.readlines()
+                lines=[x.split('\n')[0] for x in lines]
+                for line in lines:
+                        if argsFine(line,'tcptraceroute'):
+                                run_tcptraceroute(line)
+                        else:
+                                logTo(TESTSUITE_LOG,'Error in parsing Traceroute args Missing or wrong Args in testArgs/tcptraceroute','ERROR','w')
+                                sys.exit('Error! Check suite.log for more details...')
+                ftr.close()
+	elif options['n']:
+		#Adding ICSI Netalyzr Test
+                run_netalyzr()
+	elif options['p']:
+		#Adding PLT Selenium Test
+                fplt=open('testArgs/selenium','r')
+                lines=fplt.readlines()
+                lines=[x.split('\n')[0] for x in lines]
+                for line in lines:
+                        if argsFine(line,'selenium'):
+                                run_selenium(line)
+                        else:
+                                logTo(TESTSUITE_LOG,'Error in parsing Selenium  args Missing or wrong Args in testArgs/selenium','ERROR','w')
+                                sys.exit('Error! Check suite.log for more details...')
+                fplt.close()
+        elif options['c']:
+                #Adding CDN performance Test
+                run_CDN()
+               	print "done"
+        elif options['i']:
+                #Adding IP Spoofing  Test
+                #TODO
+                print "done"
+        elif options['s']:
+                #Adding Statefull Firewall Test
+                #TODO
+                print "done"
+        elif options['b']:
+                #Adding Buffer Size Test
+                #TODO
+                print "done"
 
 
 def main():
