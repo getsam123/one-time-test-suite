@@ -4,13 +4,28 @@ import sys
 import time
 import subprocess as sub
 from os.path import expanduser
-import os 
+import os
+import re
+from os import rename
+import shlex
+import pickle
+import netinfo
+import random
+from selenium import webdriver
+from datetime import datetime
+from pyvirtualdisplay import Display
+#from tracerouteparser import TracerouteParser
+#from operator import itemgetter
+#from collections import Counter
 
 TESTSUITE_LOG='suite.log'
 TEST_LOG=time.strftime("%j-%Y")+'.log'
 HOME_DIR=expanduser("~")
-EXP_DIR=HOME_DIR+"/one-time-test-suite/"
+EXP_DIR=HOME_DIR+"/Desktop/one-time-test-suite/"
 hostname = os.uname()[1]
+SERVER_PARAM=""
+fstat=open("TestStat.log",'w')
+					
 
 def argsFine(args,test):
 	if test=='curl':
@@ -23,60 +38,135 @@ def argsFine(args,test):
                         return False
                 else:
                         return True
-	elif test=='ping':
-		if len(args)!=1:
-			return False
-                else:
-                        return True
-        elif test=='tcptraceroute':
-                if len(args)!=1:
+	elif test=='ipspoof':
+                if len(args)!=2:
                         return False
                 else:
                         return True
-        elif test=='ping_gw':
-                if len(args)!=1:
+	elif test=='firewall':
+                if len(args)!=2:
+                        return False
+                else:
+                        return True
+	elif test=='buffer':
+                if len(args)!=2:
                         return False
                 else:
                         return True
 	
 def run_curl(args):
 	logTo(TEST_LOG,'Starting Curl with args . '+' '.join(args),'INFO','a')
-	p=sub.Popen(["bash","curl.sh",HOME_DIR,args[0],args[1],args[2],args[3],EXP_DIR,"onetime/"+hostname+"/"+EXP_DIR])
+	p=sub.Popen(["bash","curl.sh",HOME_DIR,args[0],args[1],args[2],args[3],EXP_DIR,"onetime/"+SERVER_PARAM])
 	p.wait()
 	logTo(TEST_LOG,'Finished Curl ','INFO','a')
+	fstat.write('Finished Curl\n')
 
 def run_iperf(args):
         logTo(TEST_LOG,'Starting Iperf with args . '+' '.join(args),'INFO','a')
-	p=sub.Popen(["bash","iperf_tcp_up.sh",HOME_DIR,args[0],args[1],args[2],EXP_DIR,"onetime/"+hostname+"/"+EXP_DIR)
+	p=sub.Popen(["bash","iperf_tcp_up.sh",HOME_DIR,args[0],args[1],args[2],EXP_DIR,"onetime/"+SERVER_PARAM])
 	p.wait()
         logTo(TEST_LOG,'Finished Iperf ','INFO','a')
+	fstat.write('Finished Iperf\n')
 
 def run_ping(args):
         logTo(TEST_LOG,'Starting Ping with args . '+' '.join(args),'INFO','a')
-        p=sub.Popen(["bash","ping.sh",HOME_DIR,args[0],args[1],args[2],EXP_DIR,"onetime/"+hostname+"/"+EXP_DIR)
+        p=sub.Popen(["bash","ping.sh",HOME_DIR,args,EXP_DIR])
         p.wait()
         logTo(TEST_LOG,'Finished Ping ','INFO','a')
 def run_ping_gw():
-	logTo(TEST_LOG,'Starting Ping Gw with args . '+' '.join(args),'INFO','a')
-        p=sub.Popen(["bash","tcptraceroute_gw.sh",HOME_DIR,args[0],args[1],args[2],EXP_DIR,"onetime/"+hostname+"/"+EXP_DIR)
-        p.wait()
+	tcptrgw=open(EXP_DIR+'/'+'ping_gw_'+time.strftime("%s"),'w')
+	FNULL=open(os.devnull,'w')
+	logTo(TEST_LOG,'Starting Ping Gw ','INFO','a')
+	ptr=sub.Popen(["tcptraceroute","-n","-i","ppp0","-m","1","-q","50","google.com"],stdout=tcptrgw,stderr=FNULL)
+	ptr.wait()
+	tcptrgw.close()
         logTo(TEST_LOG,'Finished Ping Gw ','INFO','a')
 
 def run_tcptraceroute(args):
         logTo(TEST_LOG,'Starting TCPtraceroute with args . '+' '.join(args),'INFO','a')
-        p=sub.Popen(["bash","tcptraceroute.sh",HOME_DIR,args[0],args[1],args[2],EXP_DIR,"onetime/"+hostname+"/"+EXP_DIR)
+        p=sub.Popen(["bash","tcptraceroute.sh",HOME_DIR,args,EXP_DIR])
         p.wait()
         logTo(TEST_LOG,'Finished tcptraceroute ','INFO','a')
-def run_selenium(args):
-        logTo(TEST_LOG,'Starting Selenium  with args . '+' '.join(args),'INFO','a')
-        p=sub.Popen(["python","useext.py",HOME_DIR,args,EXP_DIR)
+
+def run_netalyzr():
+	logTo(TEST_LOG,'Starting Netalyzr ','INFO','a')
+	fnet=open(EXP_DIR+'/'+'netalyzr.txt','w')
+        p=sub.Popen(["java","-jar","NetalyzrCLI.jar"],stdout=fnet)
         p.wait()
-        logTo(TEST_LOG,'Finished tcptraceroute ','INFO','a')
+        logTo(TEST_LOG,'Finished Netalyzr ','INFO','a')
+	fstat.write('Finished Netalyzr\n')
+
+def run_selenium(landmark):
+	display = Display(visible=0, size=(800, 600))
+	display.start()
+        logTo(TEST_LOG,'Selenium : Starting Selenium  for '+landmark,'INFO','a')
+	interFace=open(HOME_DIR+'/Desktop/one-time-test-suite/iface.txt','r')
+	tmp=interFace.readlines()
+	iface=tmp[0].split('\n')[0]
+	tmpstmp=datetime.now().strftime("%s")
+	profile = webdriver.FirefoxProfile()
+	profile.update_preferences()
+	browser = webdriver.Firefox(firefox_profile=profile) # assign profile to browser
+	browser.delete_all_cookies()
+	logTo(TEST_LOG,' Selenium : Starting tcpdump .. ','INFO','a')
+	tcpcmd='tcpdump -i '+iface+' -w '+EXP_DIR+'/'+'tcpdump_'+landmark.split('.')[0]+'_'+tmpstmp
+	args=shlex.split(tcpcmd)
+	ptcpdmp=sub.Popen((args))
+	time.sleep(10)
+	logTo(TEST_LOG,' Selenium : Starting get '+landmark,'INFO','a')
+	browser.get('http://www.'+landmark)
+	time.sleep(5)
+	perfData=browser.execute_script('return window.performance.timing')
+	fname=EXP_DIR+'/'+'perfdata_'+landmark.split('/')[0]
+	fname=fname.replace('.','-')
+	pickle.dump(perfData,open(fname,'wb'))
+        logTo(TEST_LOG,'Selenium : Writing done to '+EXP_DIR+'/perfdata_'+landmark,'INFO','a')
+	browser.quit()
+	display.stop()
+	ptcpdmp.terminate()
+        logTo(TEST_LOG,'Finished Selenium for '+landmark,'INFO','a')
+
 def run_CDN():
-        logTo(TEST_LOG,'Starting CDNPerf with args . '+' '.join(args),'INFO','a')
-        p=sub.Popen(["bash","tcptraceroute.sh",HOME_DIR,args[0],args[1],args[2],EXP_DIR,"onetime/"+hostname+"/"+EXP_DIR)
-        p.wait()
-        logTo(TEST_LOG,'Finished tcptraceroute ','INFO','a')	
+        logTo(TEST_LOG,'Starting CDNPerf','INFO','a')
+	websites=pickle.load(open('testArgs/CDNargs','rb'))
+	for cdn in websites:
+		for (domname,cdndomname) in websites[cdn]['Partial']:
+			logTo(TEST_LOG,'CDNPerf for '+domname,'INFO','a')
+			f1=open(EXP_DIR+'/'+'cdnperf_'+domname+'_'+datetime.now().strftime("%s"),'w')
+			p1 = sub.Popen(['tcptraceroute', '-n', domname, '-q', '10'], stdout=f1,stderr=sub.STDOUT)
+			p1.wait()
+			f1.close()
+			f2=open(EXP_DIR+'/'+'cdnperf_'+cdndomname+'_'+datetime.now().strftime("%s"),'w')
+			p2 = sub.Popen(['tcptraceroute', '-n', cdndomname, '-q', '10'], stdout=f2,stderr=sub.STDOUT)
+			p2.wait()
+			f2.close()	
+        logTo(TEST_LOG,'Finished CDNperf ','INFO','a')
+	fstat.write('Finished CDNperf\n')
+
+def run_ipspoof(args):
+        logTo(TEST_LOG,'Starting Ipspoof with args . '+' '.join(args),'INFO','a')
+	p=sub.Popen(["bash","spoofingTests.sh",HOME_DIR,args[0],args[1],EXP_DIR,"onetime/"+SERVER_PARAM])
+	p.wait()
+        logTo(TEST_LOG,'Finished Ipspoof ','INFO','a')
+	fstat.write('Finished Ip Spoofing\n')
+
+def run_firewall(args):
+        logTo(TEST_LOG,'Starting Statefull Firewall with args . '+' '.join(args),'INFO','a')
+	p=sub.Popen(["bash","firewallTests.sh",HOME_DIR,args[0],args[1],EXP_DIR,"onetime/"+SERVER_PARAM])
+	p.wait()
+        logTo(TEST_LOG,'Finished Statefull Firewall ','INFO','a')
+	fstat.write('Finished Statefull Firewall\n')
+
+def run_buffer(args,srate1,srate2):
+        logTo(TEST_LOG,'Starting Downlink Buffer with args . '+' '.join(args),'INFO','a')
+	p=sub.Popen(["bash","downlinkBuffer.sh",HOME_DIR,args[0],args[1],EXP_DIR,"onetime/"+SERVER_PARAM,srate1,srate2])
+	p.wait()
+	logTo(TEST_LOG,'Finished DownlinkBuffer ','INFO','a')
+	logTo(TEST_LOG,'Starting Uplink Buffer with args . '+' '.join(args),'INFO','a')
+	p=sub.Popen(["bash","uplinkBuffer.sh",HOME_DIR,args[0],args[1],EXP_DIR,"onetime/"+SERVER_PARAM,srate1,srate2])
+	p.wait()
+        logTo(TEST_LOG,'Finished UplinkBuffer ','INFO','a')
+	fstat.write('Finished Buffer\n')
 
 
 
@@ -85,14 +175,30 @@ def runMaster(options):
 	location='-'.join(options['L'])
 	provider='-'.join(options['P'])
 	contype='-'.join(options['C'])
+        ip=netinfo.get_ip('ppp0')
+        ipf=open('ip.txt','w')
+        ipf.write(ip)
+        ipf.close()
+        iperfport=open('iperf_port.txt','w')
+        iperfport.write(str(random.randint(1500,10000)))
+        iperfport.close()
 	global EXP_DIR
-        if options['r']:
+        global SERVER_PARAM
+        #print type(options['r'])
+        timestamp=time.strftime('%s')
+        if options['r']==None:
                 #Adding Roaming  Test
-                EXP_DIR=EXP_DIR+location+'_'+provider+'_'+contype+'/'+time.strftime('%s')
+                EXP_DIR=EXP_DIR+location+'_'+provider+'_'+contype+'/'+timestamp
+                SERVER_PARAM=hostname+'/'+location+'_'+provider+'_'+contype+'/'+timestamp
 	else:
-		EXP_DIR=EXP_DIR+location+'_'+provider+'_'+contype+'/Roam/'+options['r']+time.strftime('%s')
+		EXP_DIR=EXP_DIR+location+'_'+provider+'_'+contype+'/Roam/'+'_'.join(options['r'])+timestamp
+                SERVER_PARAM=hostname+'/'+location+'_'+provider+'_'+contype+'/Roam/'+timestamp
+	if options['re']!=None:
+		EXP_DIR=options['re'][0]
+		SERVER_PARAM=options['re'][1]
 	if not os.path.exists(EXP_DIR):
 		os.makedirs(EXP_DIR)
+	fstat.write('Resume Args:\n 1.'+EXP_DIR+'\n'+'2.'+SERVER_PARAM+'\n')
 
 	if options['t']:
 		#Adding Downlink Test
@@ -115,62 +221,88 @@ def runMaster(options):
                         logTo(TESTSUITE_LOG,'Error in parsing Iperf args Missing or wrong Args in testArgs/iperf','ERROR','w')
                         sys.exit('Error! Check suite.log for more details...')
                 fperf.close()
-	elif options['l']:
+	if options['l']:
 		#Adding Latency Tests
                 fping=open('testArgs/ping','r')
                 lines=fping.readlines()
                 lines=[x.split('\n')[0] for x in lines]
+		if contype=='umts':
+			pping=sub.Popen(["ping","-s","512","-n","106.187.35.87"])
 		for line in lines:
-			if argsFine(line,'ping'):
-				run_ping(line)
-			else:
-				logTo(TESTSUITE_LOG,'Error in parsing Ping args Missing or wrong Args in testArgs/ping','ERROR','w')
-				sys.exit('Error! Check suite.log for more details...')
+			run_ping(line)
 		fping.close()
 		run_ping_gw()
-	elif options['T']:
+		pping.terminate()
+		fstat.write('Finished Latency\n')
+	if options['T']:
 		#Addding Tcptraceroute tests
 		ftr=open('testArgs/tcptraceroute','r')
                 lines=ftr.readlines()
                 lines=[x.split('\n')[0] for x in lines]
+		if contype=='umts':
+			pping=sub.Popen(["ping","-s","512","-n","106.187.35.87"])
                 for line in lines:
-                        if argsFine(line,'tcptraceroute'):
-                                run_tcptraceroute(line)
-                        else:
-                                logTo(TESTSUITE_LOG,'Error in parsing Traceroute args Missing or wrong Args in testArgs/tcptraceroute','ERROR','w')
-                                sys.exit('Error! Check suite.log for more details...')
+                        run_tcptraceroute(line)
                 ftr.close()
-	elif options['n']:
+		pping.terminate()
+		fstat.write('Finished Tcptraceroute\n')
+	if options['n']:
 		#Adding ICSI Netalyzr Test
                 run_netalyzr()
-	elif options['p']:
+	if options['p']:
 		#Adding PLT Selenium Test
                 fplt=open('testArgs/selenium','r')
                 lines=fplt.readlines()
                 lines=[x.split('\n')[0] for x in lines]
                 for line in lines:
-                        if argsFine(line,'selenium'):
-                                run_selenium(line)
-                        else:
-                                logTo(TESTSUITE_LOG,'Error in parsing Selenium  args Missing or wrong Args in testArgs/selenium','ERROR','w')
-                                sys.exit('Error! Check suite.log for more details...')
+                        run_selenium(line)
                 fplt.close()
-        elif options['c']:
+		fstat.write('Finished Selenium\n')
+        if options['c']:
                 #Adding CDN performance Test
+		if contype=='umts':
+			pping=sub.Popen(["ping","-s","512","-n","106.187.35.87"])
                 run_CDN()
-               	print "done"
-        elif options['i']:
+		pping.terminate()
+        if options['i']:
                 #Adding IP Spoofing  Test
-                #TODO
-                print "done"
-        elif options['s']:
+                fipspoof=open('testArgs/ipspoof','r')
+                lines=fipspoof.readlines()
+                lines=[x.split('\n')[0] for x in lines]
+                if argsFine(lines,'ipspoof'):
+                	run_ipspoof(lines)
+		else:
+                        logTo(TESTSUITE_LOG,'Error in parsing Ipsoof args Missing or wrong Args in testArgs/ipspoof','ERROR','w')
+                        sys.exit('Error! Check suite.log for more details...')
+                fipspoof.close()
+        if options['s']:
                 #Adding Statefull Firewall Test
-                #TODO
-                print "done"
-        elif options['b']:
+                ffire=open('testArgs/firewall','r')
+                lines=ffire.readlines()
+                lines=[x.split('\n')[0] for x in lines]
+                if argsFine(lines,'firewall'):
+                	run_firewall(lines)
+		else:
+                        logTo(TESTSUITE_LOG,'Error in parsing Iperf args Missing or wrong Args in testArgs/firewall','ERROR','w')
+                        sys.exit('Error! Check suite.log for more details...')
+                ffire.close()
+        if options['b']:
                 #Adding Buffer Size Test
-                #TODO
-                print "done"
+		fbuff=open('testArgs/buffer','r')
+                lines=fbuff.readlines()
+                lines=[x.split('\n')[0] for x in lines]
+		if contype=='umts':
+			srate1=1000
+			srate2=2000
+		else:
+			srate1=200
+			srate2=250
+                if argsFine(lines,'buffer'):
+                	run_buffer(lines,srate1,srate2)
+		else:
+                        logTo(TESTSUITE_LOG,'Error in parsing Buffer args Missing or wrong Args in testArgs/buffer','ERROR','w')
+                        sys.exit('Error! Check suite.log for more details...')
+                fbuff.close()
 
 
 def main():
@@ -181,13 +313,14 @@ def main():
         parser.add_argument('-i',action='store_true',help='Run Ip spoofing Test')
         parser.add_argument('-s',action='store_true',help='Run Statefull Firewall Test')
         parser.add_argument('-n',action='store_true',help='Run ICSI Netalyzr Test')
-        parser.add_argument('-r',action='store_true',help='Run Roaming Test')
+        parser.add_argument('-r',nargs='*',help='Run Roaming Test')
         parser.add_argument('-p',action='store_true',help='Run Page Load Time Test')
         parser.add_argument('-c',action='store_true',help='Run CDN performance Test')
         parser.add_argument('-b',action='store_true',help='Run Buffer Size Test')
 	parser.add_argument('-L',nargs='+',help='Locaton of Test being conducted',required=True)
 	parser.add_argument('-P',nargs='+',help='Provider of Test being conducted',required=True)
 	parser.add_argument('-C',nargs='+',help='Connection type of Test being conducted umts/edge/evdo',required=True)
+	parser.add_argument('-re',nargs='+',help='Resume the tests that did not complete due to disconnections ')
 	args = parser.parse_args()
 	runargs=vars(args)
 	runMaster(runargs)

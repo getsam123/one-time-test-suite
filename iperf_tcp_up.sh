@@ -10,7 +10,7 @@ tmstmp=`date +%s`
 #iperf_uprate=`cat ${homedir}/conf | grep "IPERF_RATE_UPLINK"| grep -v "^#" | tr -d ' ' | cut -d '=' -f2`
 #iperf_downrate=`cat ${homedir}/conf | grep "IPERF_RATE_DOWNLINK"| grep -v "^#" | tr -d ' ' | cut -d '=' -f2`
 
-iperf_port=`cat ${homedir}/one-time-test-suite/iperf_port.txt`
+iperf_port=`cat ${homedir}/Desktop/one-time-test-suite/iperf_port.txt`
 ssh ${uname}@${server} "mkdir -p ./dumps/${serverparam}"
 dump_iperf_tcp_up_server="./dumps/${serverparam}/dump_iperf_tcp_up_server_$tmstmp"
 dump_iperf_tcp_down_server="./dumps/${serverparam}/dump_iperf_tcp_down_server_$tmstmp"
@@ -26,8 +26,8 @@ echo "$now" >> $outputfile
 
 echo "===========>UPLINK : TCP Iperf to ${server} at $tmstmp===============" >>$outputfile
 #Iperf Script
-iface=`cat ${homedir}/one-time-test-suite/iface.txt`
-clientip=`cat ${homedir}/one-time-test-suite/ip.txt`
+iface=`cat ${homedir}/Desktop/one-time-test-suite/iface.txt`
+clientip=`cat ${homedir}/Desktop/one-time-test-suite/ip.txt`
 
 ssh ${uname}@${server} "./start_iperf_tcpdump.sh $dump_iperf_tcp_up_server $clientip $iperf_duration $iperf_port" &
 sleep 15
