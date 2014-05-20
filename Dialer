@@ -1,0 +1,59 @@
+[Dialer AirTel]
+Init1 = ATZ
+Init2 = AT+CGDCONT=1,"IP","airtelgprs.com"
+Init3 = AT^CURC=0
+Modem Type = Analog Modem
+Baud = 9600
+New PPPD = yes
+Modem = /dev/ttyUSB0
+ISDN = 0
+Phone = *99#
+Password = null
+Username = null
+Auto Reconnect = off
+Stupid Mode = 1
+
+[Dialer IN-DOLPHIN]
+Init1 = ATZ
+Init2 = AT+CGDCONT=1,"IP","gprsppsdel"
+Init3 = AT^CURC=0
+Modem Type = Analog Modem
+Baud = 9600
+New PPPD = yes
+Modem = /dev/ttyUSB0
+ISDN = 0
+Phone = *99#
+Password = mtnl123
+Username = mtnl
+Auto Reconnect = off
+Stupid Mode = 1
+
+[Dialer DOLPHIN]
+Init1 = ATZ
+Init2 = AT+CGDCONT=1,"IP","gprsppsdel"
+Init3 = AT^CURC=0
+Modem Type = Analog Modem
+Baud = 9600
+New PPPD = yes
+Modem = /dev/ttyUSB0
+ISDN = 0
+Phone = *99#
+Password = mtnl123
+Username = mtnl
+Auto Reconnect = off
+Stupid Mode = 1
+
+[Dialer IDEA]
+Init1 = ATZ
+Init2 = AT+CGDCONT=1,"IP","internet"
+Init3 = AT^CURC=0
+Modem Type = Analog Modem
+Baud = 9600
+New PPPD = yes
+Modem = /dev/ttyUSB1
+ISDN = 0
+Phone = *99#
+Password = null
+Username = null
+Auto Reconnect = off
+Stupid Mode = 1

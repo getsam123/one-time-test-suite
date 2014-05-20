@@ -2,6 +2,7 @@ import argparse
 import logging
 import sys
 import time
+import commands
 import subprocess as sub
 from os.path import expanduser
 import os
@@ -168,6 +169,37 @@ def run_buffer(args,srate1,srate2):
         logTo(TEST_LOG,'Finished UplinkBuffer ','INFO','a')
 	fstat.write('Finished Buffer\n')
 
+def setconfig():
+	config=open('Dialer','r')
+	configmain=open('Dialermain','w')
+	lines=config.readlines()
+	for line in lines:
+		configmain.write(line)
+	configmain.write('\n[Dialer getisp]\n')
+	devs=commands.getoutput('ls -1 /dev/ttyUSB*').split('\n')
+	configmain.write('Modem = '+devs[2]+'\nInit1 = AT+COPS?\n')
+	config.close()
+	configmain.close()
+
+def DoDial():	
+	setconfig()
+	dialout=open('dialout','w')
+	p=sub.Popen(['sudo','wvdial','getisp','--config','Dialermain'],stdout=dialout,stderr=sub.STDOUT)
+	p.wait()
+	dialout.close()
+	dialout=open('dialout','r')
+	lines=dialout.readlines()
+	for line in lines:
+		if "+COPS: " in line:
+			isp=line.split('\"')[1]
+			break
+	print isp
+	fwvdial=open('wvdial_'+isp,'w')
+	p=sub.Popen(['sudo','wvidal',isp,'--config','Dialermain'],stdout=fwvdial,stderr=sub.STDOUT)
+	p.wait()
+	fwvdia.close()
+	
+
 
 
 def runMaster(options):
@@ -175,6 +207,8 @@ def runMaster(options):
 	location='-'.join(options['L'])
 	provider='-'.join(options['P'])
 	contype='-'.join(options['C'])
+	#iface=DoDial()
+	#sys.exit(0)
         ip=netinfo.get_ip('ppp0')
         ipf=open('ip.txt','w')
         ipf.write(ip)

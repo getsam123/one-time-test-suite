@@ -4,11 +4,29 @@ This is one time verison of Ruralnet Test Suite
 
 Usage:
 ===================
-ruralnetOneTime.py --config
+usage: sudo python ruralnetOneTime.py [-h] [-t] [-l] [-T] [-i] [-s] [-n] [-r [R [R ...]]]
+                          [-p] [-c] [-b] -L L [L ...] -P P [P ...] -C C
+                          [C ...] [-re RE [RE ...]]
 
-Do the Configuration for test suite
+process ruralnetOneTime arguments
 
-ruralnetOneTime.py --loc location_moretext_moretxt --provider provider
+optional arguments:
+  -h, --help       show this help message and exit
+  -t               Run Throughput Test
+  -l               Run Latency Test
+  -T               Run Traceroute Test
+  -i               Run Ip spoofing Test
+  -s               Run Statefull Firewall Test
+  -n               Run ICSI Netalyzr Test
+  -r [R [R ...]]   Run Roaming Test
+  -p               Run Page Load Time Test
+  -c               Run CDN performance Test
+  -b               Run Buffer Size Test
+  -L L [L ...]     Locaton of Test being conducted
+  -P P [P ...]     Provider of Test being conducted
+  -C C [C ...]     Connection type of Test being conducted umts/edge/evdo
+  -re RE [RE ...]  Resume the tests that did not complete due to
+                   disconnections
 
 
 Tests:
