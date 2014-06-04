@@ -160,11 +160,12 @@ def run_firewall(args):
 
 def run_buffer(args,srate1,srate2):
         logTo(TEST_LOG,'Starting Downlink Buffer with args . '+' '.join(args),'INFO','a')
-	p=sub.Popen(["bash","downlinkBuffer.sh",HOME_DIR,args[0],args[1],EXP_DIR,"onetime/"+SERVER_PARAM,srate1,srate2])
+	#logTo(TEST_LOG,HOME_DIR+' '+args[0]+' '+args[1]+' '+EXP_DIR+' '+"onetime/"+SERVER_PARAM+' '+str(srate1)+' '+str(srate2),'INFO','a')
+	p=sub.Popen(["bash","downlinkBuffer.sh",HOME_DIR,args[0],args[1],EXP_DIR,"onetime/"+SERVER_PARAM,str(srate1),str(srate2)])
 	p.wait()
 	logTo(TEST_LOG,'Finished DownlinkBuffer ','INFO','a')
 	logTo(TEST_LOG,'Starting Uplink Buffer with args . '+' '.join(args),'INFO','a')
-	p=sub.Popen(["bash","uplinkBuffer.sh",HOME_DIR,args[0],args[1],EXP_DIR,"onetime/"+SERVER_PARAM,srate1,srate2])
+	p=sub.Popen(["bash","uplinkBuffer.sh",HOME_DIR,args[0],args[1],EXP_DIR,"onetime/"+SERVER_PARAM,str(srate1),str(srate2)])
 	p.wait()
         logTo(TEST_LOG,'Finished UplinkBuffer ','INFO','a')
 	fstat.write('Finished Buffer\n')
@@ -195,9 +196,9 @@ def DoDial():
 			break
 	print isp
 	fwvdial=open('wvdial_'+isp,'w')
-	p=sub.Popen(['sudo','wvidal',isp,'--config','Dialermain'],stdout=fwvdial,stderr=sub.STDOUT)
+	p=sub.Popen(['sudo','wvdial',isp,'--config','Dialermain'],stdout=fwvdial,stderr=sub.STDOUT)
 	p.wait()
-	fwvdia.close()
+	fwvdial.close()
 	
 
 
@@ -207,9 +208,17 @@ def runMaster(options):
 	location='-'.join(options['L'])
 	provider='-'.join(options['P'])
 	contype='-'.join(options['C'])
-	#iface=DoDial()
+	#DoDial()
 	#sys.exit(0)
-        ip=netinfo.get_ip('ppp0')
+	#pdial=sub.Popen(["sudo","python","dial.py"])
+	ifup=0
+	while ifup!=1:
+		try:
+        		ip=netinfo.get_ip('ppp0')
+			ifup=1
+		except Exception as e:
+			print "here"
+			ifup=0
         ipf=open('ip.txt','w')
         ipf.write(ip)
         ipf.close()
@@ -225,7 +234,7 @@ def runMaster(options):
                 EXP_DIR=EXP_DIR+location+'_'+provider+'_'+contype+'/'+timestamp
                 SERVER_PARAM=hostname+'/'+location+'_'+provider+'_'+contype+'/'+timestamp
 	else:
-		EXP_DIR=EXP_DIR+location+'_'+provider+'_'+contype+'/Roam/'+'_'.join(options['r'])+timestamp
+		EXP_DIR=EXP_DIR+location+'_'+provider+'_'+contype+'/Roam/'+'_'.join(options['r'])+'_'+timestamp
                 SERVER_PARAM=hostname+'/'+location+'_'+provider+'_'+contype+'/Roam/'+timestamp
 	if options['re']!=None:
 		EXP_DIR=options['re'][0]
@@ -233,7 +242,9 @@ def runMaster(options):
 	if not os.path.exists(EXP_DIR):
 		os.makedirs(EXP_DIR)
 	fstat.write('Resume Args:\n 1.'+EXP_DIR+'\n'+'2.'+SERVER_PARAM+'\n')
-
+	sigdict={}
+	pickle.dump(sigdict,open(EXP_DIR+"/sigdict",'wb'))
+	psigstr=sub.Popen(["python","sigstr.py","GSM",EXP_DIR])
 	if options['t']:
 		#Adding Downlink Test
 		fcurl=open('testArgs/curl','r')
@@ -260,7 +271,7 @@ def runMaster(options):
                 fping=open('testArgs/ping','r')
                 lines=fping.readlines()
                 lines=[x.split('\n')[0] for x in lines]
-		if contype=='umts':
+		if contype=='3g':
 			pping=sub.Popen(["ping","-s","512","-n","106.187.35.87"])
 		for line in lines:
 			run_ping(line)
@@ -273,7 +284,7 @@ def runMaster(options):
 		ftr=open('testArgs/tcptraceroute','r')
                 lines=ftr.readlines()
                 lines=[x.split('\n')[0] for x in lines]
-		if contype=='umts':
+		if contype=='3g':
 			pping=sub.Popen(["ping","-s","512","-n","106.187.35.87"])
                 for line in lines:
                         run_tcptraceroute(line)
@@ -294,7 +305,7 @@ def runMaster(options):
 		fstat.write('Finished Selenium\n')
         if options['c']:
                 #Adding CDN performance Test
-		if contype=='umts':
+		if contype=='3g':
 			pping=sub.Popen(["ping","-s","512","-n","106.187.35.87"])
                 run_CDN()
 		pping.terminate()
@@ -325,7 +336,7 @@ def runMaster(options):
 		fbuff=open('testArgs/buffer','r')
                 lines=fbuff.readlines()
                 lines=[x.split('\n')[0] for x in lines]
-		if contype=='umts':
+		if contype=='3g':
 			srate1=1000
 			srate2=2000
 		else:
@@ -337,6 +348,8 @@ def runMaster(options):
                         logTo(TESTSUITE_LOG,'Error in parsing Buffer args Missing or wrong Args in testArgs/buffer','ERROR','w')
                         sys.exit('Error! Check suite.log for more details...')
                 fbuff.close()
+	psigstr.terminate()
+	#pdial.terminate()
 
 
 def main():
@@ -353,7 +366,7 @@ def main():
         parser.add_argument('-b',action='store_true',help='Run Buffer Size Test')
 	parser.add_argument('-L',nargs='+',help='Locaton of Test being conducted',required=True)
 	parser.add_argument('-P',nargs='+',help='Provider of Test being conducted',required=True)
-	parser.add_argument('-C',nargs='+',help='Connection type of Test being conducted umts/edge/evdo',required=True)
+	parser.add_argument('-C',nargs='+',help='Connection type of Test being conducted 3g/edge/evdo',required=True)
 	parser.add_argument('-re',nargs='+',help='Resume the tests that did not complete due to disconnections ')
 	args = parser.parse_args()
 	runargs=vars(args)

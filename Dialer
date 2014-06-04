@@ -13,6 +13,21 @@ Username = null
 Auto Reconnect = off
 Stupid Mode = 1
 
+[Dialer BSNL]
+Init1 = ATZ
+Init2 = AT+CGDCONT=1,"IP","bsnlnet"
+Init3 = AT^CURC=0
+Modem Type = Analog Modem
+Baud = 9600
+New PPPD = yes
+Modem = /dev/ttyUSB0
+ISDN = 0
+Phone = *99#
+Password = null
+Username = null
+Auto Reconnect = off
+Stupid Mode = 1
+
 [Dialer IN-DOLPHIN]
 Init1 = ATZ
 Init2 = AT+CGDCONT=1,"IP","gprsppsdel"
@@ -43,6 +58,21 @@ Username = mtnl
 Auto Reconnect = off
 Stupid Mode = 1
 
+[Dialer Reliance]
+Init1 = ATZ
+Init2 = AT+CGDCONT=1,"IP","smartnet"
+Init3 = AT^CURC=0
+Modem Type = Analog Modem
+Baud = 9600
+New PPPD = yes
+Modem = /dev/ttyUSB0
+ISDN = 0
+Phone = *99#
+Password = null
+Username = null
+Auto Reconnect = off
+Stupid Mode = 1
+
 [Dialer IDEA]
 Init1 = ATZ
 Init2 = AT+CGDCONT=1,"IP","internet"
@@ -50,10 +80,24 @@ Init3 = AT^CURC=0
 Modem Type = Analog Modem
 Baud = 9600
 New PPPD = yes
-Modem = /dev/ttyUSB1
+Modem = /dev/ttyUSB0
 ISDN = 0
 Phone = *99#
 Password = null
 Username = null
 Auto Reconnect = off
 Stupid Mode = 1
+
+[Dialer SIGSTRGSM]
+Modem = /dev/ttyUSB2
+Init1 = AT+CSQ
+Init2 = AT^CURC=0
+Init3 = AT+CGREG=2
+Init4 = AT+CGREG?
+Init5 = AT+COPS=3,0
+Init6 = AT+COPS?
+Init7 = AT^SYSINFO
+
+[Dialer SIGSTRCDMA]
+Modem = /dev/ttyUSB1
+Init1=AT+CSQ
