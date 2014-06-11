@@ -244,7 +244,7 @@ def runMaster(options):
 	fstat.write('Resume Args:\n 1.'+EXP_DIR+'\n'+'2.'+SERVER_PARAM+'\n')
 	sigdict={}
 	pickle.dump(sigdict,open(EXP_DIR+"/sigdict",'wb'))
-	psigstr=sub.Popen(["python","sigstr.py","GSM",EXP_DIR])
+	psigstr=sub.Popen(["python","sigstr.py","CDMA",EXP_DIR])    #change here for gsm or cdma "GSM" or "CDMA"
 	if options['t']:
 		#Adding Downlink Test
 		fcurl=open('testArgs/curl','r')

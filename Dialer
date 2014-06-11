@@ -99,5 +99,7 @@ Init6 = AT+COPS?
 Init7 = AT^SYSINFO
 
 [Dialer SIGSTRCDMA]
-Modem = /dev/ttyUSB1
+Modem = /dev/ttyUSB2
 Init1=AT+CSQ
+Init3 = AT^SYSINFO
+Init4 = AT+COPS?
